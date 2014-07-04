@@ -119,8 +119,11 @@ if __name__ == '__main__':
 		print(maxTilesY)
 		print(maxTilesX)
 		
-		array3 = readWithBits(readBits(TileIDCount, stream.readChar), stream.readChar)
-		array4 = readWithBits(readBits(WallIDCount, stream.readChar), stream.readChar)
+		array3bits = readBits(TileIDCount, stream.readChar)
+		array4bits = readBits(WallIDCount, stream.readChar)
+		array3 = readWithBits(array3bits, stream.readChar)
+		print('Offset: {0}'.format(stream.base_stream.tell()))
+		array4 = readWithBits(array4bits, stream.readChar)
 		
 		num12 = (int)(sum(array3) + sum(array4) + maxLiquidTypes + num7 + num8 + num9 + 2);
 		print('Offset: {0}'.format(stream.base_stream.tell()))
