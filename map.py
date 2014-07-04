@@ -194,7 +194,8 @@ height: {3}'''.format(version, worldName, maxTilesX, maxTilesY))
         stream = BinaryStream(io.BytesIO(bytestr))
 
         for y in range(maxTilesY):
-            for x in range(maxTilesX):
+            xit = iter(range(maxTilesX))
+            for x in xit:
                 n1 = stream.read_int8()
                 n2 = 0
                 if (n1 & 0b1) == 0b1:
@@ -216,7 +217,8 @@ height: {3}'''.format(version, worldName, maxTilesX, maxTilesY))
                 remaining = {1: stream.read_int8, 2: stream.read_int16}.get((n1 & 0b11000000) >> 6, lambda: 0)()
 
                 if layer is Header.Empty:
-                    x += remaining
+                    for _ in range(remaining):
+                        next(xit)
                     continue
 
                 worldSurface, rockLayer = y, y  # TODO
@@ -233,6 +235,7 @@ height: {3}'''.format(version, worldName, maxTilesX, maxTilesY))
                 color = (n2 >> 1) & 0b11111
                 type = types[typeIndex]
                 for i in range(remaining):
-                    x += 1
+                    next(xit)
                     if light != 255:
                         light2 = stream.read_int8()
+                print(y,x,remaining)
