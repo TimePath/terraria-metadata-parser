@@ -109,6 +109,7 @@ def read_with_bits(bitfield, read_byte):
 
 
 if __name__ == '__main__':
+    tileOptionCounts, wallOptionCounts = [1] * 340, [1] * 172  # TODO
     with open('/home/andrew/My Games/Terraria/Players/TimePath.bak/1162047362.map', 'rb') as fd:
         stream = BinaryStream(fd)
         version = stream.read_int32()
@@ -140,6 +141,54 @@ height: {3}'''.format(version, worldName, maxTilesX, maxTilesY))
 
         typeCount = 2 + sum(maxTileOptions) + sum(maxWallOptions) \
                     + liquidTypes + skyGradients + dirtGradients + rockGradients
+
+        types = [0]
+        typesIdx = 1  # index into all known types
+
+        offsetTiles = len(types)
+        for i in range(len(tileOptionCounts)):  # for all known tiles
+            if i < tileIDCount:  # that this map knows about
+                for j in range(tileOptionCounts[i]):  # for every tile option
+                    if j < maxTileOptions[i]:  # that this map knows about
+                        types.append(typesIdx)  # add a mapping
+                    typesIdx += 1
+            else:  # skip entirely
+                typesIdx += tileOptionCounts[i]
+
+        offsetWalls = len(types)
+        for i in range(len(wallOptionCounts)):  # for all known walls
+            if i < wallIDCount:  # that this map knows about
+                for j in range(wallOptionCounts[i]):  # for every wall option
+                    if j < maxWallOptions[i]:  # that this map knows about
+                        types.append(typesIdx)  # add a mapping
+                    typesIdx += 1
+            else:  # skip entirely
+                typesIdx += wallOptionCounts[i]
+
+        offsetLiquid = len(types)
+        for i in range(liquidTypes):
+            types.append(typesIdx)
+            typesIdx += 1
+
+        offsetSky = len(types)
+        for i in range(skyGradients):
+            types.append(typesIdx)
+            typesIdx += 1
+
+        offsetDirt = len(types)
+        for i in range(dirtGradients):
+            types.append(typesIdx)
+            typesIdx += 1
+
+        offsetRock = len(types)
+        for i in range(rockGradients):
+            types.append(typesIdx)
+            typesIdx += 1
+
+        # add the last tile to the end?
+        num25 = len(types)
+        types.append(typesIdx)
+
         compressed = stream.read()
         bytestr = zlib.decompress(compressed, -zlib.MAX_WBITS)
         stream = BinaryStream(io.BytesIO(bytestr))
@@ -151,11 +200,10 @@ height: {3}'''.format(version, worldName, maxTilesX, maxTilesY))
                 if (n1 & 0b1) == 0b1:
                     n2 = stream.read_int8()
 
-                b5 = (n1 & 0b1110) >> 1
+                layer = (n1 & 0b1110) >> 1
 
-                flag = {Header.Tile: True, Header.Wall: True, Header.Background: True}.get(b5, False)
                 typeIndex = 0
-                if flag:
+                if {Header.Tile: True, Header.Wall: True, Header.Background: True}.get(layer, False):
                     if (n1 & 0b1111) == 0b1111:
                         typeIndex = stream.read_uint16()
                     else:
@@ -167,12 +215,23 @@ height: {3}'''.format(version, worldName, maxTilesX, maxTilesY))
 
                 remaining = {1: stream.read_int8, 2: stream.read_int16}.get((n1 & 0b11000000) >> 6, lambda: 0)()
 
-                if not b5:
+                if layer is Header.Empty:
                     x += remaining
                     continue
 
-                # Other map stuff
-
+                worldSurface, rockLayer = y, y  # TODO
+                typeIndex += {Header.Tile: lambda: offsetTiles,
+                              Header.Wall: lambda: offsetWalls,
+                              Header.Water: lambda: offsetLiquid - Header.Water,
+                              Header.Lava: lambda: offsetLiquid - Header.Water,
+                              Header.Honey: lambda: offsetLiquid - Header.Water,
+                              Header.HeavenAndHell: lambda:
+                              offsetSky + (skyGradients * (y / worldSurface)) if y < worldSurface
+                              else num25 - typeIndex,
+                              Header.Background: lambda: offsetDirt if y < rockLayer else offsetRock
+                }.get(layer, lambda: 0)()
+                color = (n2 >> 1) & 0b11111
+                type = types[typeIndex]
                 for i in range(remaining):
                     x += 1
                     if light != 255:
