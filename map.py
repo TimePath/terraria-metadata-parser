@@ -1,7 +1,7 @@
 # !/usr/bin/env python3
 import zlib
 import io
-from enum import Enum
+from enum import IntEnum
 from struct import *
 
 
@@ -73,7 +73,7 @@ class BinaryStream:
         self.pack(str(length) + 's', value)
 
 
-class Header(Enum):
+class Header(IntEnum):
     Empty = 0
     Tile = 1
     Wall = 2
@@ -205,7 +205,7 @@ height: {3}'''.format(version, worldName, maxTilesX, maxTilesY))
 
                 typeIndex = 0
                 if {Header.Tile: True, Header.Wall: True, Header.Background: True}.get(layer, False):
-                    if (n1 & 0b1111) == 0b1111:
+                    if (n1 & 0b10000) == 0b10000:
                         typeIndex = stream.read_uint16()
                     else:
                         typeIndex = stream.read_int8()
@@ -214,9 +214,9 @@ height: {3}'''.format(version, worldName, maxTilesX, maxTilesY))
                 if (n1 & 0b100000) == 0b100000:
                     light = stream.read_int8()
 
-                remaining = {1: stream.read_int8, 2: stream.read_int16}.get((n1 & 0b11000000) >> 6, lambda: 0)()
+                remaining = {1: stream.read_uint8, 2: stream.read_uint16}.get((n1 & 0b11000000) >> 6, lambda: 0)()
 
-                if layer is Header.Empty:
+                if layer == Header.Empty:
                     for _ in range(remaining):
                         next(xit)
                     continue
