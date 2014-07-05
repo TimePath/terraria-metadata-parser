@@ -208,11 +208,11 @@ height: {3}'''.format(version, worldName, maxTilesX, maxTilesY))
                     if (n1 & 0b10000) == 0b10000:
                         typeIndex = stream.read_uint16()
                     else:
-                        typeIndex = stream.read_int8()
+                        typeIndex = stream.read_uint8()
 
                 light = 255  # 255 has special meaning
                 if (n1 & 0b100000) == 0b100000:
-                    light = stream.read_int8()
+                    light = stream.read_uint8()
 
                 remaining = {1: stream.read_uint8, 2: stream.read_uint16}.get((n1 & 0b11000000) >> 6, lambda: 0)()
 
@@ -237,5 +237,5 @@ height: {3}'''.format(version, worldName, maxTilesX, maxTilesY))
                 for i in range(remaining):
                     next(xit)
                     if light != 255:
-                        light2 = stream.read_int8()
+                        light2 = stream.read_uint8()
                 print(y,x,remaining)
